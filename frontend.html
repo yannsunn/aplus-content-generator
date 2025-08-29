@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マルチ画像 Amazon A+コンテンツ テキスト生成システム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.75rem;
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drop-zone.drag-over {
+            background-color: #e0f2fe;
+            border-color: #3b82f6;
+        }
+        .image-preview-thumb-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .image-preview-thumb {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+            border: 2px solid #e5e7eb;
+        }
+        .remove-image-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 9999px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .remove-image-btn:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">マルチ画像 A+コンテンツ生成システム</h1>
+            <p class="mt-2 text-md text-gray-600">画像をドラッグ＆ドロップし、各画像に最適なA+コンテンツ用テキストをAIが生成します。</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 入力セクション -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 space-y-6">
+                
+                <div>
+                    <h2 class="text-2xl font-semibold mb-3 text-gray-800 border-b pb-2">1. 画像をアップロード</h2>
+                    
+                    <div class="space-y-2">
+                        <label class="font-semibold text-gray-700">ヘッダー用メイン画像 (1枚)</label>
+                        <div id="headerDropZone" class="drop-zone p-6 text-center cursor-pointer min-h-[150px]">
+                            <input type="file" id="headerUpload" accept="image/*" class="hidden">
+                            <div id="headerPreviewContainer">
+                                <p class="text-gray-500">ここにドラッグ＆ドロップするか、クリックして選択</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 mt-4">
+                        <label class="font-semibold text-gray-700">特徴用の画像 (最大3枚)</label>
+                        <div id="featuresDropZone" class="drop-zone p-6 text-center cursor-pointer min-h-[150px]">
+                            <input type="file" id="featuresUpload" accept="image/*" multiple class="hidden">
+                            <div id="featuresPreviewContainer" class="grid grid-cols-3 gap-4 justify-center items-center w-full">
+                                <p class="text-gray-500 col-span-3">ここにドラッグ＆ドロップするか、クリックして選択</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-2xl font-semibold mb-2 text-gray-800 border-b pb-2">2. AIでテキストを生成</h2>
+                     <button id="generateBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 duration-300 shadow-md flex items-center justify-center" disabled>
+                        <span id="generateBtnText">A+コンテンツを生成</span>
+                        <div id="generateLoader" class="loader hidden ml-3"></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 出力セクション -->
+            <div id="outputSection" class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hidden">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 class="text-2xl font-semibold text-gray-800">生成されたA+コンテンツ (編集可能)</h2>
+                    <button id="copyBtn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform transform hover:scale-105 duration-300 shadow-md text-sm">
+                        全文コピー
+                    </button>
+                </div>
+                <p id="copyFeedback" class="text-right text-sm text-green-600 h-4 mb-2"></p>
+                <div id="dynamicContentArea" class="space-y-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const headerDropZone = document.getElementById('headerDropZone');
+            const headerUpload = document.getElementById('headerUpload');
+            const headerPreviewContainer = document.getElementById('headerPreviewContainer');
+            
+            const featuresDropZone = document.getElementById('featuresDropZone');
+            const featuresUpload = document.getElementById('featuresUpload');
+            const featuresPreviewContainer = document.getElementById('featuresPreviewContainer');
+
+            const generateBtn = document.getElementById('generateBtn');
+            const outputSection = document.getElementById('outputSection');
+            const copyBtn = document.getElementById('copyBtn');
+            const copyFeedback = document.getElementById('copyFeedback');
+            const generateLoader = document.getElementById('generateLoader');
+            const generateBtnText = document.getElementById('generateBtnText');
+            const dynamicContentArea = document.getElementById('dynamicContentArea');
+
+            let headerImageFile = null;
+            let featureImageFiles = [];
+
+            function setupDropZone(dropZone, fileInput, fileHandler, isMultiple) {
+                dropZone.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => fileHandler(e.target.files));
+
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('drag-over');
+                });
+
+                dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('drag-over');
+                    fileHandler(e.dataTransfer.files);
+                });
+            }
+
+            function renderPreviews() {
+                headerPreviewContainer.innerHTML = '';
+                if (headerImageFile) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'image-preview-thumb-wrapper';
+                    wrapper.innerHTML = `
+                        <img src="${headerImageFile.url}" class="image-preview-thumb">
+                        <div class="remove-image-btn" data-type="header">&times;</div>
+                    `;
+                    headerPreviewContainer.appendChild(wrapper);
+                } else {
+                    headerPreviewContainer.innerHTML = '<p class="text-gray-500">ここにドラッグ＆ドロップするか、クリックして選択</p>';
+                }
+
+                featuresPreviewContainer.innerHTML = '';
+                if (featureImageFiles.length > 0) {
+                    featureImageFiles.forEach((file, index) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'image-preview-thumb-wrapper';
+                        wrapper.innerHTML = `
+                            <img src="${file.url}" class="image-preview-thumb">
+                            <div class="remove-image-btn" data-type="feature" data-index="${index}">&times;</div>
+                        `;
+                        featuresPreviewContainer.appendChild(wrapper);
+                    });
+                } else {
+                    featuresPreviewContainer.innerHTML = '<p class="text-gray-500 col-span-3">ここにドラッグ＆ドロップするか、クリックして選択</p>';
+                }
+                checkGenerateButtonState();
+            }
+            
+            function handleImageRemoval(e) {
+                if (!e.target.classList.contains('remove-image-btn')) return;
+                
+                e.stopPropagation();
+                const type = e.target.dataset.type;
+                if (type === 'header') {
+                    headerImageFile = null;
+                    headerUpload.value = '';
+                } else if (type === 'feature') {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    featureImageFiles.splice(index, 1);
+                    featuresUpload.value = '';
+                }
+                renderPreviews();
+            }
+
+            headerPreviewContainer.addEventListener('click', handleImageRemoval);
+            featuresPreviewContainer.addEventListener('click', handleImageRemoval);
+
+            function handleHeaderFile(files) {
+                const file = files[0];
+                if (!file || !file.type.startsWith('image/')) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    headerImageFile = { name: file.name, base64: e.target.result.split(',')[1], url: e.target.result };
+                    renderPreviews();
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function handleFeatureFiles(files) {
+                const newFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+                if (featureImageFiles.length + newFiles.length > 3) {
+                    alert('特徴画像は最大3枚までです。');
+                    return;
+                }
+
+                newFiles.forEach(file => {
+                    if (featureImageFiles.length >= 3) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        featureImageFiles.push({ name: file.name, base64: e.target.result.split(',')[1], url: e.target.result });
+                        renderPreviews();
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function checkGenerateButtonState() {
+                generateBtn.disabled = !headerImageFile;
+            }
+            
+            setupDropZone(headerDropZone, headerUpload, handleHeaderFile, false);
+            setupDropZone(featuresDropZone, featuresUpload, handleFeatureFiles, true);
+
+            generateBtn.addEventListener('click', async () => {
+                if (!headerImageFile) {
+                    alert('ヘッダー画像をアップロードしてください。');
+                    return;
+                }
+
+                generateBtn.disabled = true;
+                generateLoader.classList.remove('hidden');
+                generateBtnText.textContent = '生成中...';
+                dynamicContentArea.innerHTML = '';
+
+                const allImages = [headerImageFile, ...featureImageFiles];
+
+                try {
+                    const analyzedContent = await analyzeImagesWithGemini(allImages.map(f => f.base64));
+                    renderEditableContent(analyzedContent, allImages);
+                    outputSection.classList.remove('hidden');
+                    outputSection.classList.add('fade-in');
+                } catch (error) {
+                    console.error('Error during content generation:', error);
+                    alert(`コンテンツの生成中にAPIエラーが発生しました。詳細はコンソールを確認してください。\nエラー: ${error.message}`);
+                } finally {
+                    generateBtn.disabled = false;
+                    generateLoader.classList.add('hidden');
+                    generateBtnText.textContent = 'A+コンテンツを生成';
+                }
+            });
+            
+            async function analyzeImagesWithGemini(base64Images) {
+                const apiKey = "";
+                const modelName = "gemini-pro-vision";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                
+                const prompt = `You are an expert copywriter for Amazon A+ Content. Analyze the following ${base64Images.length} product images. The first image is the main header image, and the subsequent images highlight specific features. Your task is to return a single, valid JSON object with the structure: { "header": { "headline": "...", "body": "..." }, "features": [ { "headline": "...", "body": "..." } ] }. Generate one feature object for each feature image provided after the main header image. The response must be ONLY the JSON object, without any markdown formatting.`;
+                
+                const payload = {
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            ...base64Images.map(data => ({
+                                inlineData: { mimeType: "image/png", data: data }
+                            }))
+                        ]
+                    }]
+                };
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("API Error Response:", errorText);
+                        throw new Error(`API request failed with status ${response.status}: ${errorText || response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (!result.candidates || !result.candidates[0].content || !result.candidates[0].content.parts || !result.candidates[0].content.parts[0].text) {
+                        console.error("Unexpected API response structure:", result);
+                        throw new Error("Invalid response structure from API.");
+                    }
+
+                    const text = result.candidates[0].content.parts[0].text;
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) {
+                        console.error("No valid JSON found in the API response:", text);
+                        throw new Error("AI did not return a valid JSON object.");
+                    }
+                    return JSON.parse(jsonMatch[0]);
+                } catch (error) {
+                    console.error("Fetch operation failed:", error);
+                    throw error;
+                }
+            }
+
+            function renderEditableContent(content, allImages) {
+                dynamicContentArea.innerHTML = '';
+                const headerHtml = `
+                    <div class="p-4 bg-gray-50 rounded-lg border" data-module="header">
+                        <h3 class="text-lg font-semibold text-blue-700 mb-3">モジュール1: テキスト付き標準画像ヘッダー</h3>
+                        <div class="flex items-start space-x-4">
+                            <img src="${allImages[0].url}" class="image-preview-thumb flex-shrink-0">
+                            <div class="w-full space-y-2">
+                                <input type="text" value="${content.header.headline}" class="w-full p-2 border rounded-md font-bold" data-field="headline">
+                                <textarea class="w-full p-2 border rounded-md text-sm h-24" data-field="body">${content.header.body}</textarea>
+                            </div>
+                        </div>
+                    </div>`;
+                dynamicContentArea.innerHTML += headerHtml;
+
+                if (content.features && content.features.length > 0) {
+                    const featuresHtml = `
+                        <div class="p-4 bg-gray-50 rounded-lg border" data-module="features">
+                            <h3 class="text-lg font-semibold text-blue-700 mb-3">モジュール2: 標準的な3つの画像とテキスト</h3>
+                            <div class="grid grid-cols-1 gap-4">
+                                ${content.features.map((feature, index) => `
+                                    <div class="flex items-start space-x-4 border-t pt-4" data-feature-index="${index}">
+                                        <img src="${allImages[index + 1].url}" class="image-preview-thumb flex-shrink-0">
+                                        <div class="w-full space-y-2">
+                                            <input type="text" value="${feature.headline}" class="w-full p-2 border rounded-md font-bold text-sm" data-field="headline">
+                                            <textarea class="w-full p-2 border rounded-md text-sm h-20" data-field="body">${feature.body}</textarea>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                    dynamicContentArea.innerHTML += featuresHtml;
+                }
+            }
+            
+            copyBtn.addEventListener('click', () => {
+                let fullText = '';
+                const headerModule = document.querySelector('[data-module="header"]');
+                if (headerModule) {
+                    const headerHeadline = headerModule.querySelector('[data-field="headline"]').value;
+                    const headerBody = headerModule.querySelector('[data-field="body"]').value;
+                    fullText += `[モジュール1: ヘッダー]\n見出し: ${headerHeadline}\n本文: ${headerBody}\n\n--------------------\n`;
+                }
+                const featuresModule = document.querySelector('[data-module="features"]');
+                if (featuresModule) {
+                    featuresModule.querySelectorAll('[data-feature-index]').forEach((el, index) => {
+                        const featureHeadline = el.querySelector('[data-field="headline"]').value;
+                        const featureBody = el.querySelector('[data-field="body"]').value;
+                        fullText += `[モジュール2: 特徴${index + 1}]\n見出し: ${featureHeadline}\n本文: ${featureBody}\n\n--------------------\n`;
+                    });
+                }
+                const textarea = document.createElement('textarea');
+                textarea.value = fullText.trim();
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    copyFeedback.textContent = 'コピーしました！';
+                } catch (err) {
+                    copyFeedback.textContent = 'コピーに失敗しました。';
+                }
+                document.body.removeChild(textarea);
+                setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+            });
+        });
+    </script>
+
+</body>
+</html>
