@@ -1,9 +1,8 @@
 export default function handler(req, res) {
-  // Vercel環境変数からAPIキーを取得
+  // APIキーは公開しない - 設定状況のみ返す
   const apiKey = process.env.GEMINI_API_KEY || '';
   
   res.status(200).json({ 
-    apiKey: apiKey,
     configured: apiKey.length > 0
   });
 }

@@ -289,68 +289,25 @@
             });
             
             async function analyzeImagesWithGemini(base64Images) {
-                // 環境変数からAPIキーを取得
-                let apiKey = "";
+                // バックエンドAPIを経由して安全に処理
                 try {
-                    const configResponse = await fetch('/api/config');
-                    const configData = await configResponse.json();
-                    apiKey = configData.apiKey;
-                    
-                    if (!apiKey || !configData.configured) {
-                        throw new Error("Gemini APIキーが設定されていません。Vercelの環境変数GEMINI_API_KEYを設定してください。");
-                    }
-                } catch (error) {
-                    console.error("APIキーの取得に失敗:", error);
-                    throw new Error("APIキーの取得に失敗しました。環境変数を確認してください。");
-                }
-                
-                // gemini-1.5-flash supports vision and is more cost-effective
-                const modelName = "gemini-1.5-flash";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-                
-                const prompt = `You are an expert copywriter for Amazon A+ Content. Analyze the following ${base64Images.length} product images. The first image is the main header image, and the subsequent images highlight specific features. Your task is to return a single, valid JSON object with the structure: { "header": { "headline": "...", "body": "..." }, "features": [ { "headline": "...", "body": "..." } ] }. Generate one feature object for each feature image provided after the main header image. The response must be ONLY the JSON object, without any markdown formatting.`;
-                
-                const payload = {
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            ...base64Images.map(data => ({
-                                inlineData: { mimeType: "image/png", data: data }
-                            }))
-                        ]
-                    }]
-                };
-                
-                try {
-                    const response = await fetch(apiUrl, {
+                    const response = await fetch('/api/analyze', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ images: base64Images })
                     });
 
                     if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error("API Error Response:", errorText);
-                        throw new Error(`API request failed with status ${response.status}: ${errorText || response.statusText}`);
+                        const errorData = await response.json();
+                        console.error("API Error:", errorData);
+                        throw new Error(errorData.error || `リクエストが失敗しました (${response.status})`);
                     }
 
                     const result = await response.json();
-                    
-                    if (!result.candidates || !result.candidates[0].content || !result.candidates[0].content.parts || !result.candidates[0].content.parts[0].text) {
-                        console.error("Unexpected API response structure:", result);
-                        throw new Error("Invalid response structure from API.");
-                    }
-
-                    const text = result.candidates[0].content.parts[0].text;
-                    const jsonMatch = text.match(/\{[\s\S]*\}/);
-                    if (!jsonMatch) {
-                        console.error("No valid JSON found in the API response:", text);
-                        throw new Error("AI did not return a valid JSON object.");
-                    }
-                    return JSON.parse(jsonMatch[0]);
+                    return result;
                 } catch (error) {
-                    console.error("Fetch operation failed:", error);
-                    throw error;
+                    console.error("コンテンツ生成エラー:", error);
+                    throw new Error("コンテンツの生成に失敗しました。しばらく待ってから再度お試しください。");
                 }
             }
 
