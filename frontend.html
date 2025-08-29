@@ -291,7 +291,7 @@
             async function analyzeImagesWithGemini(base64Images) {
                 // バックエンドAPIを経由して安全に処理
                 try {
-                    const response = await fetch('/api/analyze', {
+                    const response = await fetch('/api/analyze-openai', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ images: base64Images })
