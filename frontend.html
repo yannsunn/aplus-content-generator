@@ -289,7 +289,21 @@
             });
             
             async function analyzeImagesWithGemini(base64Images) {
-                const apiKey = "";
+                // 環境変数からAPIキーを取得
+                let apiKey = "";
+                try {
+                    const configResponse = await fetch('/api/config');
+                    const configData = await configResponse.json();
+                    apiKey = configData.apiKey;
+                    
+                    if (!apiKey || !configData.configured) {
+                        throw new Error("Gemini APIキーが設定されていません。Vercelの環境変数GEMINI_API_KEYを設定してください。");
+                    }
+                } catch (error) {
+                    console.error("APIキーの取得に失敗:", error);
+                    throw new Error("APIキーの取得に失敗しました。環境変数を確認してください。");
+                }
+                
                 const modelName = "gemini-pro-vision";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
                 
