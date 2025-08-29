@@ -16,5 +16,9 @@
       "source": "/index.html",
       "destination": "/frontend.html"
     }
-  ]
+  ],
+  "github": {
+    "silent": true
+  },
+  "public": true
 }
