@@ -304,7 +304,8 @@
                     throw new Error("APIキーの取得に失敗しました。環境変数を確認してください。");
                 }
                 
-                const modelName = "gemini-pro-vision";
+                // gemini-1.5-flash supports vision and is more cost-effective
+                const modelName = "gemini-1.5-flash";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
                 
                 const prompt = `You are an expert copywriter for Amazon A+ Content. Analyze the following ${base64Images.length} product images. The first image is the main header image, and the subsequent images highlight specific features. Your task is to return a single, valid JSON object with the structure: { "header": { "headline": "...", "body": "..." }, "features": [ { "headline": "...", "body": "..." } ] }. Generate one feature object for each feature image provided after the main header image. The response must be ONLY the JSON object, without any markdown formatting.`;
