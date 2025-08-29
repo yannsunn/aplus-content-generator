@@ -1,15 +1,18 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "frontend.html",
-      "use": "@vercel/static"
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 10
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/frontend.html"
+      "source": "/",
+      "destination": "/frontend.html"
+    },
+    {
+      "source": "/index.html",
+      "destination": "/frontend.html"
     }
   ]
 }

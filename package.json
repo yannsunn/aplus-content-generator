@@ -1,0 +1,11 @@
+{
+  "name": "aplus-content-generator-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for A+ Content Generator",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.0"
+  }
+}
